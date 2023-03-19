@@ -20,10 +20,7 @@ parts/
 sdist/
 var/
 wheels/
-<<<<<<< HEAD
 pip-wheel-metadata/
-=======
->>>>>>> a08998b (initial commit)
 share/python-wheels/
 *.egg-info/
 .installed.cfg
