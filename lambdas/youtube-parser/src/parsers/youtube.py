@@ -1,7 +1,7 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import date
 from dataclasses import dataclass
 
 import requests
@@ -116,7 +116,7 @@ class YouTube:
         if not response:
             return CountryTrends(
                 country_code=country_code,
-                extraction_date=str(datetime.now()),
+                extraction_date=str(date.today()),
                 videos=[]
             )
 
@@ -140,7 +140,7 @@ class YouTube:
 
         return CountryTrends(
             country_code=country_code,
-            extraction_date=str(datetime.now()),
+            extraction_date=str(date.today()),
             videos=videos
         )
 
