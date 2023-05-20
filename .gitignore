@@ -9,7 +9,6 @@
 .idea/**/dictionaries
 .idea/**/shelf
 .idea
-.vscode
 
 # Generated files
 .idea/**/contentModel.xml
@@ -92,7 +91,6 @@ pip-selfcheck.json
 __pycache__/
 *.py[cod]
 *$py.class
-credentials.py
 
 
 # Distribution / packaging
@@ -150,3 +148,6 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# application logs
+*.log

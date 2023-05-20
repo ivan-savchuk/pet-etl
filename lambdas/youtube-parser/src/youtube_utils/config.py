@@ -6,7 +6,7 @@ class Config:
     _cfg: dict[str, str] = {}
 
     @classmethod
-    def get_config(cls) -> dict[str, str]:
+    def get_config(cls) -> dict[str, str | list]:
         if not cls._cfg:
             cls._cfg = {
                 "bucket": os.environ.get("BUCKET_NAME", ""),
