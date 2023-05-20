@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+  LambdaCodeBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "pet-etl-lambda-code-storage"
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"
+
+  RawDataBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "pet-etl-raw-data-storage"
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"

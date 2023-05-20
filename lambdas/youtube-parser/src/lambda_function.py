@@ -1,13 +1,12 @@
 import logging
 import json
 from concurrent.futures import (
-    ThreadPoolExecutor,
-    as_completed
+    ThreadPoolExecutor
 )
 
-from utils.config import Config
+from youtube_utils.config import Config
+from youtube_utils.compose_names import compose_s3_key
 from parsers.youtube import YouTube
-from utils.compose_names import compose_s3_key
 from repo.s3.bucket import Bucket
 
 
@@ -39,5 +38,5 @@ def lambda_handler(event: dict, context: dict) -> dict:
                 raise f.exception()
     return {
         "statusCode": 200,
-        "body": json.dumps("Trends were succussfully extracted and saved!")
+        "body": json.dumps("Trends were successfully extracted and saved!")
     }
