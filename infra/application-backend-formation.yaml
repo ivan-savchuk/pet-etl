@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
+Description: "Resources for Application Backend in pet-etl project. Which includes Lambda, Glue, StepFunctions"
 
 Resources:
   YouTubeParserLogGroup:

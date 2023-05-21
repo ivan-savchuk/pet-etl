@@ -60,6 +60,7 @@ create-cdbs-stack:
 	@echo "Creating PetETLComputeDBStorage CloudFormation stack"
 	aws cloudformation deploy --stack-name PetETLComputeDBStorage \
 	  --template-file infra/compute-databse-storage-formation.yaml \
+	  --parameter-overrides DBPassword=$(PG_PASSWORD) \
 	  --profile default
 
 .PHONY: delete-cdbs-stack
