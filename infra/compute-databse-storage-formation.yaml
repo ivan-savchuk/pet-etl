@@ -1,4 +1,11 @@
 AWSTemplateFormatVersion: "2010-09-09"
+Description: "Resources for Compute, Database and Storage in pet-etl project"
+
+Parameters:
+  DBPassword:
+    Description: "Enter the password for the database"
+    Type: "String"
+    NoEcho: "true"
 
 Resources:
   LambdaCodeBucket:
@@ -16,3 +23,36 @@ Resources:
       Tags:
         - Key: "project"
           Value: "pet-etl"
+
+  PetEtlDBSecurityGroup:
+    Type: "AWS::RDS::DBSecurityGroup"
+    Properties:
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"
+      GroupDescription: "Allow access to the RDS instance"
+      DBSecurityGroupIngress:
+        - CIDRIP: "0.0.0.0/0"
+
+  PetEtlDBInstance:
+    Type: "AWS::RDS::DBInstance"
+    Description: "RDS instance for pet-etl project"
+    Properties:
+      AllocatedStorage: "20"
+      DBInstanceClass: "db.t3.micro"
+      Engine: "postgres"
+      EngineVersion: "14.7"
+      DBInstanceIdentifier: "PetEtlDBInstance"
+      MasterUsername: "postgres"
+      MasterUserPassword: !Sub "${DBPassword}"
+      DBSecurityGroups:
+        - !Ref "PetEtlDBSecurityGroup"
+      PubliclyAccessible: "true"
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"
+
+Outputs:
+  DBEndpoint:
+    Value: !GetAtt "PetEtlDBInstance.Endpoint.Address"
+    Description: "Endpoint for the created RDS instance"
