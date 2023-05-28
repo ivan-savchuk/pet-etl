@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Resources for Compute, Database and Storage in pet-etl project"
+Description: "Resources for Compute, Database and Storage"
 
 Parameters:
   DBPassword:
@@ -8,6 +8,14 @@ Parameters:
     NoEcho: "true"
 
 Resources:
+  GlueScriptsBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "pet-etl-glue-scripts"
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"
+
   LambdaCodeBucket:
     Type: "AWS::S3::Bucket"
     Properties:

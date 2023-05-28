@@ -68,3 +68,47 @@ Resources:
           YOUTUBE_URL: ""
           BUCKET_NAME: ""
           COUNTRY_CODES: ""
+
+  GlueJobYouTubeRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "GlueJobYouTubePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                Resource: "arn:aws:s3:::pet-etl-glue-scripts/*"
+              - Effect: "Allow"
+                Action:
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                Resource: "arn:aws:s3:::pet-etl-raw-data-storage/*"
+
+  GlueJobYouTube:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Name: "GlueJobYouTube"
+      Role: !Ref GlueJobYouTubeRole
+      GlueVersion: "3.0"
+      Command:
+        Name: "glueetl"
+        ScriptLocation: "s3://pet-etl-glue-scripts/transform_youtube_trends.py"
+      DefaultArguments:
+        "--job-language": "python"
+        "--enable-metrics": ""
+        "--enable-continuous-cloudwatch-log": "true"
+        "--continuous-log-logGroup": 'aws-glue/job/youtube-trends-transform'
+      MaxRetries: 0
