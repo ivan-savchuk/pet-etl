@@ -44,7 +44,10 @@ deploy-lambda: build-lambda
 	@echo "Deploying $(LAMBDA_NAME) lambda zip package"
 	cd lambdas; \
 	cd $(LAMBDA_DIR); \
-	aws lambda update-function-code --function-name $(LAMBDA_NAME) --zip-file "fileb://$(LAMBDA_DIR).zip" > deployment/code-output.json
+	aws lambda update-function-code \
+		--function-name $(LAMBDA_NAME) \
+		--zip-file "fileb://$(LAMBDA_DIR).zip" \
+		> deployment/code-output.json
 	make clean-lambda-dir LAMBDA_DIR=$(LAMBDA_DIR)
 
 .PHONY: build-glue-job
