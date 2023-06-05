@@ -55,9 +55,9 @@ job = Job(glue_context)
 job.init(args["JOB_NAME"], args)
 
 logger = glue_context.get_logger()
-logger.debug(f"Starting Job {args['JOB_NAME']}")
+logger.info(f"Starting Job {args['JOB_NAME']}")
 
-logger.debug("Reading data from S3")
+logger.info("Reading data from S3")
 trends_df = glue_context.create_dynamic_frame.from_options(
     connection_type="s3",
     connection_options={
@@ -70,7 +70,7 @@ trends_df = glue_context.create_dynamic_frame.from_options(
     format="json"
 ).toDF()
 
-logger.debug("Transforming data")
+logger.info("Transforming data")
 exploded_df = trends_df.withColumn("videos", explode(col("videos")))
 flattened_df = exploded_df.select(
     col("country_code"),
@@ -104,7 +104,7 @@ time_udf = spark_glue.udf.register("duration", transform_to_time, StringType())
 flattened_df = flattened_df.withColumn('duration', time_udf(col('duration')))
 flattened_df = flattened_df.withColumnRenamed("duration", "video_duration")
 
-logger.debug("Writing data to Postgres")
+logger.info("Writing data to Postgres")
 flattened_df.write.jdbc(
     url=f"jdbc:postgresql://{args['PG_HOST']}:{args['PG_PORT']}/{args['PG_DATABASE']}",
     table=args["DESTINATION_TABLE"],
@@ -116,5 +116,5 @@ flattened_df.write.jdbc(
     }
 )
 
-logger.debug("Job finished, committing...")
+logger.info("Job finished, committing...")
 job.commit()
