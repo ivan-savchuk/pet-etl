@@ -60,7 +60,52 @@ Resources:
         - Key: "project"
           Value: "pet-etl"
 
+  MetabaseInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: "ami-053b0d53c279acc90"
+      InstanceType: "t2.micro"
+      KeyName: "MetabasePetIvan"
+      SecurityGroupIds:
+        - !Ref "MetabaseSecurityGroup"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install -y default-jdk wget
+          wget https://downloads.metabase.com/v0.41.2/metabase.jar
+          wget https://jdbc.postgresql.org/download/postgresql-42.2.23.jar
+          echo 'export MB_JETTY_ACCEPTORS=2' >> /etc/environment
+          echo 'export MB_JETTY_THREADS=50' >> /etc/environment
+          echo 'export MB_DB_TYPE=postgres' >> /etc/environment
+          echo 'export MB_DB_PORT=5432' >> /etc/environment
+          java -jar metabase.jar &
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"
+
+  MetabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Enable SSH and HTTP access"
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          FromPort: "22"
+          ToPort: "22"
+          IpProtocol: "tcp"
+        - CidrIp: "0.0.0.0/0"
+          FromPort: "3000"
+          ToPort: "3000"
+          IpProtocol: "tcp"
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"
+
 Outputs:
   DBEndpoint:
-    Value: !GetAtt "PetEtlDBInstance.Endpoint.Address"
     Description: "Endpoint for the created RDS instance"
+    Value: !GetAtt "PetEtlDBInstance.Endpoint.Address"
+
+  MetabaseURL:
+    Description: "URL to access the Metabase instance"
+    Value: !Sub "http://${MetabaseInstance.PublicIp}:3000"
