@@ -58,30 +58,30 @@ build-glue-job:
 deploy-glue-job:
 	@echo "Deploying lambda package"
 
-.PHONY: create-cdbs-stack
-create-cdbs-stack:
+.PHONY: create-cdbs
+create-cdbs:
 	@echo "Creating PetETLComputeDBStorage CloudFormation stack"
 	aws cloudformation deploy --stack-name PetETLComputeDBStorage \
 	  --template-file infra/compute-databse-storage-formation.yaml \
 	  --parameter-overrides DBPassword=$(PG_PASSWORD) \
 	  --profile default
 
-.PHONY: delete-cdbs-stack
-delete-cdbs-stack:
+.PHONY: delete-cdbs
+delete-cdbs:
 	@echo "Deleting PetETLComputeDBStorage CloudFormation stack"
 	aws cloudformation delete-stack --stack-name PetETLComputeDBStorage \
 	  --profile default
 
-.PHONY: create-backend-stack
-create-backend-stack:
+.PHONY: create-backend
+create-backend:
 	@echo "Creating PetETLBackend CloudFormation stack"
 	aws cloudformation deploy --stack-name PetETLBackend \
 	  --template-file infra/application-backend-formation.yaml \
 	  --capabilities CAPABILITY_NAMED_IAM \
 	  --profile default
 
-.PHONY: delete-backend-stack
-delete-backend-stack:
+.PHONY: delete-backend
+delete-backend:
 	@echo "Deleting PetETLBackend CloudFormation stack"
 	aws cloudformation delete-stack --stack-name PetETLBackend \
 	  --profile default

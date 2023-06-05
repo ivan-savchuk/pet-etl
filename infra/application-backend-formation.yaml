@@ -112,3 +112,108 @@ Resources:
         "--enable-continuous-cloudwatch-log": "true"
         "--continuous-log-logGroup": 'aws-glue/job/youtube-trends-transform'
       MaxRetries: 0
+
+  StepFunctionsYooTubeTrendsRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+                - "lambda.amazonaws.com"
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "StepFunctionsYooTubeTrendsPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "glue:StartJobRun"
+                Resource: "*"
+
+  StateMachine:
+    Type: "AWS::StepFunctions::StateMachine"
+    Description: "Daily execution of YouTube trends data processing"
+    Properties:
+      DefinitionString:
+        Fn::Sub: |-
+          {
+            "Comment": "Daily execution of YouTube trends processing",
+            "StartAt": "InvokeLambda",
+            "States": {
+              "InvokeLambda": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "OutputPath": "$.Payload",
+                "Parameters": {
+                  "Payload.$": "$",
+                  "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:youtube-parser:$LATEST"
+                },
+                "Next": "InvokeGlueJob"
+              },
+              "InvokeGlueJob": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:glue:startJobRun",
+                "Parameters": {
+                  "JobName": "GlueJobYouTube"
+                },
+                "Next": "Done"
+              },
+                "Done": {
+                    "Type": "Succeed"
+                }
+            }
+          }
+      RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/StepFunctionsYooTubeTrendsRole"
+      StateMachineName: "DailyYouTubeProcessing"
+
+  InvokeStateMachineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "InvokeStateMachinePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "states:StartExecution"
+                Resource: !GetAtt StateMachine.Arn
+
+  EventRule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      ScheduleExpression: "cron(0 20 * * ? *)"
+      State: "ENABLED"
+      RoleArn: !GetAtt InvokeStateMachineRole.Arn
+      Targets:
+        - Arn: !GetAtt StateMachine.Arn
+          Id: "TargetStateMachine"
+          RoleArn: !GetAtt InvokeStateMachineRole.Arn
+
+  PermissionForEventsToInvokeStateMachine:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt YouTubeParserLambda.Arn
+      Principal: "states.amazonaws.com"
+      SourceArn: !GetAtt StateMachine.Arn
