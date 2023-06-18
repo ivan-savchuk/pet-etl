@@ -21,16 +21,18 @@ def transform_to_time(value: str) -> str:
         if len(split_time[2]) == 1:
             split_time[2] = f"0{split_time[2]}"
         return f"{split_time[0]}:{split_time[1]}:{split_time[2]}"
-    elif len(split_time) == 2:
+    if len(split_time) == 2:
         if len(split_time[0]) == 1:
             split_time[0] = f"0{split_time[0]}"
         if len(split_time[1]) == 1:
             split_time[1] = f"0{split_time[1]}"
         return f"00:{split_time[0]}:{split_time[1]}"
-    elif len(split_time) == 1:
+    if len(split_time) == 1:
         if len(split_time[0]) == 1:
             split_time[0] = f"0{split_time[0]}"
         return f"00:00:{split_time[0]}"
+
+    return "00:00:00"
 
 
 args = getResolvedOptions(
@@ -101,7 +103,7 @@ flattened_df = exploded_df.select(
 )
 
 time_udf = spark_glue.udf.register("duration", transform_to_time, StringType())
-flattened_df = flattened_df.withColumn('duration', time_udf(col('duration')))
+flattened_df = flattened_df.withColumn("duration", time_udf(col("duration")))
 flattened_df = flattened_df.withColumnRenamed("duration", "video_duration")
 
 logger.info("Writing data to Postgres")

@@ -161,5 +161,5 @@ min-public-methods = 1
 
 [EXCEPTIONS]
 overgeneral-exceptions =
-    BaseException,
-    Exception
+    builtins.BaseException,
+    builtins.Exception
