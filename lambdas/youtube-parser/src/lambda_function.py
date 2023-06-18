@@ -30,7 +30,7 @@ def lambda_handler(event: dict, context: dict) -> dict:
     bucket = Bucket()
     with ThreadPoolExecutor(max_workers=len(CONFIG["country_codes"])) as executor:
         futures = [
-            executor.submit(bucket.put_object, CONFIG["bucket"], key, trend.to_json()) 
+            executor.submit(bucket.put_object, CONFIG["bucket"], key, trend.to_json())
             for key, trend in zip(s3_keys, trends)
         ]
         for f in futures:

@@ -13,9 +13,55 @@ help:
 	@echo "make deploy-glue-job"
 	@echo "       Deploy glue job package"
 
+.PHONY: linter-common
+linter-common:
+	@echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+	@echo "Running linter for common"
+	@echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+	PYTHONPATH="./common/src" pylint $(shell git ls-files 'common/src/*.py') \
+		--rcfile ./.pylintrc \
+		--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'
+
+.PHONY: linter-lambda
+linter-lambda:
+	@echo ""
+	@echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+	@echo "Running linter for lambdas"
+	@echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+	@if [ "$(OS)" = "win" ]; \
+	then \
+		PYTHONPATH="./lambdas/youtube-parser/src;./common/src" pylint $(shell git ls-files 'lambdas/$(LAMBDA_DIR)/*.py') \
+			--rcfile ./.pylintrc \
+			--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+	else \
+		PYTHONPATH="./lambdas/youtube-parser/src:./common/src" pylint $(shell git ls-files 'lambdas/$(LAMBDA_DIR)/*.py') \
+			--rcfile ./.pylintrc \
+			--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+	fi
+
+.PYTHON: linter-glue
+linter-glue:
+	@echo ""
+	@echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+	@echo "Running linter for glue"
+	@echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+	@if [ "$(OS)" = "win" ]; \
+	then \
+		PYTHONPATH="./glue/jobs/data-transform/src;./common/src" pylint $(shell git ls-files 'glue/jobs/data-transform/src/*.py') \
+			--rcfile ./.pylintrc \
+			--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+	else \
+		PYTHONPATH="./glue/jobs/data-transform/src:./common/src" pylint $(shell git ls-files 'glue/jobs/data-transform/src/*.py') \
+			--rcfile ./.pylintrc \
+			--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+	fi
+
 .PHONY: linter
 linter:
 	@echo "Running linter"
+	$(MAKE) linter-common && \
+	$(MAKE) linter-lambda && \
+	$(MAKE) linter-glue
 
 .PHONY: test
 test:
