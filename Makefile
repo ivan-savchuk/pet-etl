@@ -47,11 +47,11 @@ linter-glue:
 	@echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
 	@if [ "$(OS)" = "win" ]; \
 	then \
-		PYTHONPATH="./lambdas/youtube-parser/src;./common/src" pylint $(shell git ls-files 'lambdas/$(LAMBDA_DIR)/*.py') \
+		PYTHONPATH="./glue/jobs/data-transform/src;./common/src" pylint $(shell git ls-files 'glue/jobs/data-transform/src/*.py') \
 			--rcfile ./.pylintrc \
 			--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
 	else \
-		PYTHONPATH="./lambdas/youtube-parser/src:./common/src" pylint $(shell git ls-files 'lambdas/$(LAMBDA_DIR)/*.py') \
+		PYTHONPATH="./glue/jobs/data-transform/src:./common/src" pylint $(shell git ls-files 'glue/jobs/data-transform/src/*.py') \
 			--rcfile ./.pylintrc \
 			--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
 	fi
@@ -59,8 +59,8 @@ linter-glue:
 .PHONY: linter
 linter:
 	@echo "Running linter"
-	$(MAKE) linter-common
-	$(MAKE) linter-lambda
+	$(MAKE) linter-common && \
+	$(MAKE) linter-lambda && \
 	$(MAKE) linter-glue
 
 .PHONY: test
