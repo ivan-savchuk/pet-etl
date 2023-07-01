@@ -10,7 +10,6 @@ class Config:
         if not cls._cfg:
             cls._cfg = {
                 "bucket": os.environ.get("BUCKET_NAME", ""),
-                "api_key": os.environ.get("YOUTUBE_API_KEY", ""),
                 "url": os.environ.get("YOUTUBE_URL", ""),
                 "country_codes": os.environ.get("COUNTRY_CODES", "").split(","),
             }
