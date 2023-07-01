@@ -1,9 +1,11 @@
 import sys
 from datetime import datetime
 
+import boto3
 from awsglue.utils import getResolvedOptions
 from awsglue.context import GlueContext
 from awsglue.job import Job
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import explode, col
 from pyspark.sql.types import StringType
@@ -35,16 +37,18 @@ def transform_to_time(value: str) -> str:
     return "00:00:00"
 
 
+def get_ssm_parameter(parameter_name: str) -> str:
+    ssm_client = boto3.client("ssm")
+    return ssm_client.get_parameter(
+        Name=parameter_name,
+        WithDecryption=True
+    )["Parameter"]["Value"]
+
+
 args = getResolvedOptions(
     sys.argv,
     [
-        "JOB_NAME",
-        "PG_PASSWORD",
-        "PG_HOST",
-        "PG_PORT",
-        "PG_DATABASE",
-        "PG_USER",
-        "DESTINATION_TABLE"
+        "JOB_NAME"
     ]
 )
 
@@ -107,13 +111,14 @@ flattened_df = flattened_df.withColumn("duration", time_udf(col("duration")))
 flattened_df = flattened_df.withColumnRenamed("duration", "video_duration")
 
 logger.info("Writing data to Postgres")
+pg_creds = get_ssm_parameter("pg_db_creds").split(",")
 flattened_df.write.jdbc(
-    url=f"jdbc:postgresql://{args['PG_HOST']}:{args['PG_PORT']}/{args['PG_DATABASE']}",
-    table=args["DESTINATION_TABLE"],
+    url=f"jdbc:postgresql://{pg_creds[-2]}:{pg_creds[0]}/{pg_creds[-1]}",
+    table=get_ssm_parameter("glue_destination_table"),
     mode="append",
     properties={
-        "user": args["PG_USER"],
-        "password": args["PG_PASSWORD"],
+        "user": pg_creds[1],
+        "password": pg_creds[2],
         "driver": "org.postgresql.Driver"
     }
 )

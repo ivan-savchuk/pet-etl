@@ -10,6 +10,28 @@ Resources:
           Value: "pet-etl"
       LogGroupName: "/aws/lambda/youtube-parser"
 
+  YouTubeParserLambda:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Tags:
+        - Key: "project"
+          Value: "pet-etl"
+      Code:
+        S3Bucket: "pet-etl-lambda-code-storage"
+        S3Key: "lambda-template.zip"
+      FunctionName: "youtube-parser"
+      Handler: "lambda_function.lambda_handler"
+      MemorySize: 512
+      PackageType: "Zip"
+      Role: !GetAtt "YouTubeParserIamRoleLambdaExecution.Arn"
+      Runtime: "python3.10"
+      Timeout: 900
+      Environment:
+        Variables:
+          YOUTUBE_URL: "https://youtube.googleapis.com/youtube/v3/videos"
+          BUCKET_NAME: "pet-etl-raw-data-storage"
+          COUNTRY_CODES: "AE,AL,AM,AR,AT,AU,AZ,BA,BD,BE,BG,BH,BO,BR,CA,CY,CZ,DE,ES,GB,GE,IT,FR,JP,KZ,ME,NL,NZ,PL,UA,US"
+
   YouTubeParserIamRoleLambdaExecution:
     Type: "AWS::IAM::Role"
     Properties:
@@ -38,36 +60,18 @@ Resources:
         PolicyDocument:
           Version: "2012-10-17"
           Statement:
-          - Effect: "Allow"
-            Action:
-            - "logs:CreateLogStream"
-            - "logs:CreateLogGroup"
-            - "logs:PutLogEvents"
-            Resource:
-            - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/youtube-parser*:*"
-
-  YouTubeParserLambda:
-    Type: "AWS::Lambda::Function"
-    Properties:
-      Tags:
-        - Key: "project"
-          Value: "pet-etl"
-      Code:
-        S3Bucket: "pet-etl-lambda-code-storage"
-        S3Key: "lambda-template.zip"
-      FunctionName: "youtube-parser"
-      Handler: "lambda_function.lambda_handler"
-      MemorySize: 512
-      PackageType: "Zip"
-      Role: !GetAtt "YouTubeParserIamRoleLambdaExecution.Arn"
-      Runtime: "python3.10"
-      Timeout: 900
-      Environment:
-        Variables:
-          YOUTUBE_API_KEY: ""
-          YOUTUBE_URL: ""
-          BUCKET_NAME: ""
-          COUNTRY_CODES: ""
+            - Effect: "Allow"
+              Action:
+                - "ssm:GetParameter"
+              Resource:
+                - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/youtube_api_key"
+            - Effect: "Allow"
+              Action:
+              - "logs:CreateLogStream"
+              - "logs:CreateLogGroup"
+              - "logs:PutLogEvents"
+              Resource:
+                - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/youtube-parser*:*"
 
   GlueJobYouTubeRole:
     Type: "AWS::IAM::Role"
@@ -86,6 +90,14 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
+              - Effect: "Allow"
+                Action:
+                  - "ssm:GetParameter"
+                  - "ssm:GetParameters"
+                  - "ssm:GetParametersByPath"
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/pg_db_creds"
+                  - !Sub "arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/glue_destination_table"
               - Effect: "Allow"
                 Action:
                   - "s3:GetObject"
