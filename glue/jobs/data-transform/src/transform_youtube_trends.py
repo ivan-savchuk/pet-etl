@@ -7,34 +7,29 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import explode, col
-from pyspark.sql.types import StringType
+from pyspark.sql.functions import explode, col, when, regexp_replace, split, size, concat, lit, lpad
 
 
-def transform_to_time(value: str) -> str:
-    stripped_time = value.strip("PT")
-    time_with_colons = stripped_time.replace("H", ":").replace("M", ":").replace("S", "")
-    split_time = time_with_colons.split(":")
-    if len(split_time) == 3:
-        if len(split_time[0]) == 1:
-            split_time[0] = f"0{split_time[0]}"
-        if len(split_time[1]) == 1:
-            split_time[1] = f"0{split_time[1]}"
-        if len(split_time[2]) == 1:
-            split_time[2] = f"0{split_time[2]}"
-        return f"{split_time[0]}:{split_time[1]}:{split_time[2]}"
-    if len(split_time) == 2:
-        if len(split_time[0]) == 1:
-            split_time[0] = f"0{split_time[0]}"
-        if len(split_time[1]) == 1:
-            split_time[1] = f"0{split_time[1]}"
-        return f"00:{split_time[0]}:{split_time[1]}"
-    if len(split_time) == 1:
-        if len(split_time[0]) == 1:
-            split_time[0] = f"0{split_time[0]}"
-        return f"00:00:{split_time[0]}"
+def transform_to_time(column):
+    stripped_time = regexp_replace(column, "PT", "")
+    time_with_colons = regexp_replace(stripped_time, "([HMS])", ":")
+    split_time = split(time_with_colons, ":")
+    split_time_len = size(split_time)
 
-    return "00:00:00"
+    hours_expr = when(split_time_len >= 3, split_time[0]).otherwise(lit("0"))
+    minutes_expr = when(split_time_len >= 3, split_time[1]).when(split_time_len == 2, split_time[0])\
+        .otherwise(lit("0"))
+    seconds_expr = when(split_time_len >= 3, split_time[2]).when(split_time_len == 2, split_time[1])\
+        .otherwise(split_time[0])
+
+    hours_expr = lpad(hours_expr, 2, "0")
+    minutes_expr = lpad(minutes_expr, 2, "0")
+    seconds_expr = lpad(seconds_expr, 2, "0")
+
+    duration_expr = when(seconds_expr != "00", concat(hours_expr, lit(":"), minutes_expr, lit(":"), seconds_expr))\
+        .otherwise(concat(hours_expr, lit(":"), minutes_expr))
+
+    return duration_expr
 
 
 def get_ssm_parameter(parameter_name: str) -> str:
@@ -106,8 +101,7 @@ flattened_df = exploded_df.select(
     col("videos.view").alias("views").cast("bigint")
 )
 
-time_udf = spark_glue.udf.register("duration", transform_to_time, StringType())
-flattened_df = flattened_df.withColumn("duration", time_udf(col("duration")))
+flattened_df = flattened_df.withColumn("duration", transform_to_time(col("duration")))
 flattened_df = flattened_df.withColumnRenamed("duration", "video_duration")
 
 logger.info("Writing data to Postgres")
