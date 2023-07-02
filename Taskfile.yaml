@@ -1,0 +1,131 @@
+version: '3'
+
+tasks:
+  linter-common:
+    desc: "Run linter for all Python shared code"
+    cmds:
+      - |-
+        #!/bin/bash
+        echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+        echo "Running linter for common"
+        echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+        PYTHONPATH="./common/src" pylint $(git ls-files 'common/src/*.py') --rcfile ./.pylintrc --output-format='text' \
+            --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'
+  linter-lambda:
+    desc: "Run linter for all AWS Lambda related code"
+    vars:
+      OS: '{{.OS | default "linux"}}'
+      LAMBDA_DIR: '{{.LAMBDA_DIR | default "youtube-parser"}}'
+    cmds:
+      - |-
+        #!/bin/bash
+        echo ""
+        echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+        echo "Running linter for lambdas"
+        echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+        if [ "{{.OS}}" = "win" ]; \
+        then \
+        	PYTHONPATH="./lambdas/{{.LAMBDA_DIR}}/src;./common/src" pylint $(git ls-files 'lambdas/{{.LAMBDA_DIR}}/*.py') \
+        		--rcfile ./.pylintrc \
+        		--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+        else \
+        	PYTHONPATH="./lambdas/{{.LAMBDA_DIR}}/src:./common/src" pylint $(git ls-files 'lambdas/{{.LAMBDA_DIR}}/*.py') \
+        		--rcfile ./.pylintrc \
+        		--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+        fi
+  linter-glue:
+    desc: "Run linter for all AWS Glue related code"
+    vars:
+      OS: '{{.OS | default "linux"}}'
+      JOB_DIR: '{{.JOB_DIR | default "data-transform"}}'
+    cmds:
+      - |-
+        #!/bin/bash
+        echo ""
+        echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+        echo "Running linter for glue"
+        echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
+        if [ "{{.OS}}" = "win" ]; \
+        then \
+        	PYTHONPATH="./glue/jobs/{{.JOB_DIR}}/src;./common/src" pylint $(git ls-files 'glue/jobs/{{.JOB_DIR}}/src/*.py') \
+        		--rcfile ./.pylintrc \
+        		--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+        else \
+        	PYTHONPATH="./glue/jobs/{{.JOB_DIR}}/src:./common/src" pylint $(git ls-files 'glue/jobs/{{.JOB_DIR}}/src/*.py') \
+        		--rcfile ./.pylintrc \
+        		--output-format='text' --msg-template='{abspath}:{line}:{column}:{msg_id}: ({msg}) ({symbol})'; \
+        fi
+  linter:
+    desc: "Run linter for all Python code"
+    deps: [linter-common, linter-lambda, linter-glue]
+
+  build-lambda:
+    desc: "Build lambda zip package"
+    vars:
+      LAMBDA_DIR: '{{.LAMBDA_DIR | default "youtube-parser"}}'
+    cmds:
+      - |-
+        cd lambdas; \
+        cd {{.LAMBDA_DIR}}; \
+        mkdir -p deployment; \
+        pip install --upgrade --target ./deployment -r requirements.txt; \
+        cp -r ../../common/src/* ./deployment/; \
+        cp -r ./src/* ./deployment/; \
+        cd deployment; 7z a ../{{.LAMBDA_DIR}}.zip * -r; cd ..;
+  clean-lambda-dir:
+    desc: "Clean lambda dir"
+    vars:
+      LAMBDA_DIR: '{{.LAMBDA_DIR | default "youtube-parser"}}'
+    cmds:
+      - |-
+        cd lambdas; \
+        cd {{.LAMBDA_DIR}}; \
+        rm -rf deployment; \
+        rm -rf {{.LAMBDA_DIR}}.zip
+
+  deploy-lambda:
+    desc: "Deploy lambda zip package"
+    vars:
+      LAMBDA_DIR: '{{.LAMBDA_DIR | default "youtube-parser"}}'
+      LAMBDA_NAME: '{{.LAMBDA_NAME | default "youtube-parser"}}'
+    cmds:
+      - task: build-lambda
+      - |-
+        echo "Deploying {{.LAMBDA_NAME}} lambda zip package"
+        cd lambdas; \
+        cd {{.LAMBDA_DIR}}; \
+        aws lambda update-function-code \
+        --function-name {{.LAMBDA_NAME}} \
+        --zip-file "fileb://{{.LAMBDA_DIR}}.zip" \
+        > deployment/code-output.json
+        make clean-lambda-dir LAMBDA_DIR={{.LAMBDA_DIR}}
+      - task: clean-lambda-dir
+  create-cdbs:
+    desc: "Creating PetETLComputeDBStorage CloudFormation stack"
+    vars:
+      PG_PASSWORD: '{{.PG_PASSWORD | default "postgres"}}'
+    cmds:
+      - |-
+        echo "Creating PetETLComputeDBStorage CloudFormation stack"
+        aws cloudformation deploy --stack-name PetETLComputeDBStorage \
+        --template-file infra/compute-databse-storage-formation.yaml \
+        --parameter-overrides DBPassword={{.PG_PASSWORD}} \
+        --profile default
+  delete-cdbs:
+    desc: "Deleting PetETLComputeDBStorage CloudFormation stack"
+    cmds:
+      - |-
+        aws cloudformation delete-stack --stack-name PetETLComputeDBStorage \
+          --profile default
+  create-backend:
+    desc: "Creating PetETLBackend CloudFormation stack"
+    cmds:
+      - |-
+        aws cloudformation deploy --stack-name PetETLBackend \
+          --template-file infra/application-backend-formation.yaml \
+          --capabilities CAPABILITY_NAMED_IAM --profile default
+  delete-backend:
+    desc: "Deleting PetETLBackend CloudFormation stack"
+    cmds:
+      - |-
+        aws cloudformation delete-stack --stack-name PetETLBackend --profile default
