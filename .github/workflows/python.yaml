@@ -27,7 +27,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Install Taskfile
         run: |
-          curl -L https://taskfile.dev/install.sh | sh
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
       - name: Lint with pylint
         run: |
           task linter
