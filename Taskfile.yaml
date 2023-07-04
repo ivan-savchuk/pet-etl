@@ -23,7 +23,7 @@ tasks:
         echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
         echo "Running linter for lambdas"
         echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
-        if [ "{{.OS}}" = "win" ]; \
+        if [ "{{.OS}}" = "Windows_NT" ]; \
         then \
         	PYTHONPATH="./lambdas/{{.LAMBDA_DIR}}/src;./common/src" pylint $(git ls-files 'lambdas/{{.LAMBDA_DIR}}/*.py') \
         		--rcfile ./.pylintrc \
@@ -45,7 +45,7 @@ tasks:
         echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
         echo "Running linter for glue"
         echo "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-"
-        if [ "{{.OS}}" = "win" ]; \
+        if [ "{{.OS}}" = "Windows_NT" ]; \
         then \
         	PYTHONPATH="./glue/jobs/{{.JOB_DIR}}/src;./common/src" pylint $(git ls-files 'glue/jobs/{{.JOB_DIR}}/src/*.py') \
         		--rcfile ./.pylintrc \
@@ -57,7 +57,11 @@ tasks:
         fi
   linter:
     desc: "Run linter for all Python code"
-    deps: [linter-common, linter-lambda, linter-glue]
+    cmds:
+      - task linter-common
+      - task linter-lambda
+      - task linter-glue JOB_DIR=data-transform
+      - task linter-glue JOB_DIR=aggregate
 
   build-lambda:
     desc: "Build lambda zip package"

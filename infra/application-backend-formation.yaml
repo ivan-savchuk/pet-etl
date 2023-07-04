@@ -125,7 +125,23 @@ Resources:
         "--continuous-log-logGroup": 'aws-glue/job/youtube-trends-transform'
       MaxRetries: 0
 
-  StepFunctionsYooTubeTrendsRole:
+  GlueAggJobYouTube:
+    Type: "AWS::Glue::Job"
+    Properties:
+      Name: "GlueAggJobYouTube"
+      Role: !Ref GlueJobYouTubeRole
+      GlueVersion: "3.0"
+      Command:
+        Name: "glueetl"
+        ScriptLocation: "s3://pet-etl-glue-scripts/agg_youtube_trends_stats.py"
+      DefaultArguments:
+        "--job-language": "python"
+        "--enable-metrics": ""
+        "--enable-continuous-cloudwatch-log": "true"
+        "--continuous-log-logGroup": 'aws-glue/job/youtube-trends-agg'
+      MaxRetries: 0
+
+  StepFunctionsYooTubeTrendsRoleNew:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -165,28 +181,46 @@ Resources:
             "States": {
               "InvokeLambda": {
                 "Type": "Task",
-                "Resource": "arn:aws:states:::lambda:invoke",
+                "Resource": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:lambda:invoke",
                 "OutputPath": "$.Payload",
                 "Parameters": {
                   "Payload.$": "$",
                   "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:youtube-parser:$LATEST"
                 },
-                "Next": "InvokeGlueJob"
+                "Next": "WaitForLambda"
               },
-              "InvokeGlueJob": {
+              "WaitForLambda": {
+                "Type": "Wait",
+                "Seconds": 30,
+                "Next": "InvokeGlueJobTransform"
+              },
+              "InvokeGlueJobTransform": {
                 "Type": "Task",
                 "Resource": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:glue:startJobRun",
                 "Parameters": {
                   "JobName": "GlueJobYouTube"
                 },
+                "Next": "WaitForGlue"
+              },
+              "WaitForGlue": {
+                "Type": "Wait",
+                "Seconds": 90,
+                "Next": "InvokeGlueJobAgg"
+              },
+              "InvokeGlueJobAgg": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:glue:startJobRun",
+                "Parameters": {
+                  "JobName": "GlueAggJobYouTube"
+                },
                 "Next": "Done"
               },
-                "Done": {
-                    "Type": "Succeed"
-                }
+              "Done": {
+                "Type": "Succeed"
+              }
             }
           }
-      RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/StepFunctionsYooTubeTrendsRole"
+      RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/StepFunctionsYooTubeTrendsRoleNew"
       StateMachineName: "DailyYouTubeProcessing"
 
   InvokeStateMachineRole:
@@ -199,6 +233,7 @@ Resources:
             Principal:
               Service:
                 - "events.amazonaws.com"
+                - "states.amazonaws.com"
             Action:
               - "sts:AssumeRole"
       Policies:
